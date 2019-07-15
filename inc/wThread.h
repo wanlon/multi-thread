@@ -1,6 +1,12 @@
 #ifndef WTHREAD_H
 #define WTHREAD_H
 
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <pthread.h>
+#include <assert.h>
+
 /*
 *线程池里所有运行和等待的队列都是一个CThread_worker结构
 *由于所有的CThread_worker结构都在队列中，所以是队列中的一个节点
@@ -36,9 +42,11 @@ typedef struct
     int cur_queue_size;
 }CThread_pool;
 
-static void pool_init(int max_thread_num);
-static void *thread_routine(void *arg);
-static void pool_add_worker(void *(*process)(void *arg), void *arg);
-static void pool_destory();
+void pool_init(int max_thread_num);
+void *thread_routine(void *arg);
+void pool_add_worker(void *(*process)(void *arg), void *arg);
+void pool_destroy();
+
+static CThread_pool *pool = NULL;
 
 #endif

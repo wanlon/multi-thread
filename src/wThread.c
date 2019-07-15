@@ -1,6 +1,7 @@
 #include <stdio.h>
-
+#include <pthread.h>
 #include "wThread.h"
+
 
 void pool_init(int max_thread_num)
 {
@@ -15,9 +16,9 @@ void pool_init(int max_thread_num)
     pthread_cond_init(&(pool->queue_ready), NULL);
  
     pool->queue_head = NULL;    
-    pool->shutdow = 0;
+    pool->shutdown = 0;
     pool->max_thread_num = max_thread_num;
-    pool->threadid = (pthread *)malloc(sizeof(pthread) * max_thread_num);
+    pool->threadid = (pthread_t *)malloc(sizeof(pthread_t) * max_thread_num);
     if(pool->threadid == NULL) {
         printf("pool_init2\n");    
         exit(-1);
@@ -29,7 +30,7 @@ void pool_init(int max_thread_num)
  
     /*创建max_thread_num数目的线程*/
     for(i-0; i<max_thread_num; i++) {
-        pthread_create(&pool->threadid[i], NULL, thread_routine, NULL)
+        pthread_create(&pool->threadid[i], NULL, thread_routine, NULL);
     }
 }
 
@@ -47,11 +48,11 @@ void *thread_routine(void *arg)
             pthread_cond_wait(&(pool->queue_ready), &(pool->queue_lock));
         }
  
-        if(shutdown) {
+        if(pool->shutdown) {
             /*遇到break,continue,return等跳转语句，千万不要忘记先解锁*/
             pthread_mutex_unlock(&(pool->queue_lock));
-            printf("thread x%x will exit\n", phread_self());
-            pthread_exit();
+            printf("thread x%x will exit\n", pthread_self());
+            pthread_exit(0);
         }
         
         printf("thread 0x%x is starting to work\n", pthread_self());
@@ -75,7 +76,7 @@ void *thread_routine(void *arg)
 void pool_add_worker(void *(*process)(void *arg), void *arg)
 {
     //为新的任务分配内存，然后添加到任务队列中
-    CThread_woker *newwork = (CThread_worker *)malloc(sizeof(CThread_worker));
+    CThread_worker *newwork = (CThread_worker *)malloc(sizeof(CThread_worker));
     if(newwork == NULL) {
         printf("pool_add_worker\n");
         exit(-1);
@@ -108,7 +109,7 @@ void pool_add_worker(void *(*process)(void *arg), void *arg)
     
 }
 
-void pool_destory()
+void pool_destroy()
 {
     if(pool->shutdown) {
         return -1; /*防止两次调用*/
@@ -136,8 +137,8 @@ void pool_destory()
     }
  
     /*销毁条件互斥锁和条件变量*/
-    pthread_mutex_destory(&(pool->queue_lock));
-    pthread_cond_destory(&(pool->queue_ready));
+    pthread_mutex_destroy(&(pool->queue_lock));
+    pthread_cond_destroy(&(pool->queue_ready));
  
     free(pool);
     /*销毁后指针置空*/
